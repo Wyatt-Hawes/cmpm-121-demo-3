@@ -4,9 +4,11 @@ import leaflet from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
 
+//TODO - Start using the Board class
+
 const ORIGIN = leaflet.latLng({
-  lat: 36.9995,
-  lng: -122.0533,
+  lat: 0,
+  lng: 0,
 });
 
 const PLAYER_LOCATION = leaflet.latLng({
