@@ -4,7 +4,6 @@ import luck from "./luck";
 interface Cell {
   readonly i: number;
   readonly j: number;
-  tokens: Token[];
 }
 
 export class Token {
@@ -23,38 +22,34 @@ export class Board {
   readonly tileWidth: number;
   readonly tileVisibilityRadius: number;
 
-  private readonly knownCells: Map<string, Cell>;
+  private readonly knownCellTokens: Map<string, Token[]>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
-    this.knownCells = new Map();
+    this.knownCellTokens = new Map();
   }
 
-  private getCanonicalCell(cellCord: CellCoordinate): Cell {
+  private getCanonicalTokens(cellCord: CellCoordinate): Token[] {
     const { i, j } = cellCord;
     const key = [i, j].toString();
 
-    if (!this.knownCells.has(key)) {
+    if (!this.knownCellTokens.has(key)) {
       console.log("Generating new cell");
       const value: number = this.generateRandomSeededValue(i, j);
       const tokens: Token[] = [];
       for (let index = 0; index < value; index++) {
         tokens.push(new Token(i, j, index));
       }
-      this.knownCells.set(key, { i: i, j: j, tokens: tokens });
+      this.knownCellTokens.set(key, tokens);
     }
-    return this.knownCells.get(key)!;
+    return this.knownCellTokens.get(key)!;
   }
 
   getCellForPoint(point: leaflet.LatLng): Cell {
     const I = Math.floor(point.lat / this.tileWidth);
     const J = Math.floor(point.lng / this.tileWidth);
-    return this.getCanonicalCell({ i: I, j: J });
-  }
-
-  getCellFromCoordinates(i: number, j: number) {
-    return this.getCanonicalCell({ i: i, j: j });
+    return { i: I, j: J };
   }
 
   getCellBounds(cell: Cell): leaflet.LatLngBounds {
@@ -64,22 +59,19 @@ export class Board {
     ]);
   }
   addTokenToCell(cellCord: CellCoordinate, token: Token) {
-    const cell = this.getCanonicalCell(cellCord);
-    cell.tokens.push(token);
-
-    //const key = [cell.i, cell.j].toString();
-    //this.knownCells.set(key, cell);
+    const tokens = this.getCanonicalTokens(cellCord);
+    tokens.push(token);
   }
   popTokenFromCell(cellCord: CellCoordinate, index: number): Token {
-    const cell = this.getCanonicalCell(cellCord);
-    return cell.tokens.splice(index, 1)[0];
+    const tokens = this.getCanonicalTokens(cellCord);
+    return tokens.splice(index, 1)[0];
 
     //const key = [cell.i, cell.j].toString();
     //this.knownCells.set(key, cell);
   }
 
   getCellTokens(cellCord: CellCoordinate): Token[] {
-    return this.getCanonicalCell(cellCord).tokens;
+    return this.getCanonicalTokens(cellCord);
   }
 
   getCellsNearPoint(point: leaflet.LatLng): Cell[] {
@@ -95,7 +87,7 @@ export class Board {
   cellExists(cellCord: CellCoordinate): boolean {
     const { i, j } = cellCord;
     const key = [i, j].toString();
-    return this.knownCells.has(key);
+    return this.knownCellTokens.has(key);
   }
 
   generateRandomSeededValue(i: number, j: number): number {

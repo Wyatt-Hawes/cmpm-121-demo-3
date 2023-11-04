@@ -49,7 +49,7 @@ createResetButton();
 //-------------------------------------
 
 function makePit(i: number, j: number) {
-  const cell = board.getCellFromCoordinates(i, j);
+  const cell = { i, j };
   const bounds = board.getCellBounds(cell);
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
 
@@ -58,13 +58,12 @@ function makePit(i: number, j: number) {
     const container = document.createElement("div");
     container.innerHTML = `
                 <div style="width: 210px">Pit Location (${i} , ${j}). </br>Capacity: <span id="tokens"><button id="deposit">deposit</button></div>`;
+    const deposit = container.querySelector<HTMLButtonElement>("#deposit")!;
 
-    //Add grab for each token
+    //Add grab buttons for each token
     tokens.forEach((token) => {
       addTokenButton(tokens, token, container, i, j);
     });
-
-    const deposit = container.querySelector<HTMLButtonElement>("#deposit")!;
 
     //Add deposit function for the box
     deposit.addEventListener("click", () => {
