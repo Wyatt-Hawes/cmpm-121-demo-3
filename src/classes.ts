@@ -27,7 +27,17 @@ export class Board {
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
+
     this.knownCellTokens = new Map();
+
+    const obj = localStorage.getItem("map");
+
+    if (obj == null) {
+      this.knownCellTokens = new Map();
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      this.knownCellTokens = JSON.parse(obj);
+    }
   }
 
   private getCanonicalTokens(cellCord: CellCoordinate): Token[] {
@@ -45,6 +55,9 @@ export class Board {
     }
     return this.knownCellTokens.get(key)!;
   }
+  //   private setLocalStorage() {
+  //     localStorage.setItem("map", JSON.stringify(this.knownCellTokens));
+  //   }
 
   getCellForPoint(point: leaflet.LatLng): Cell {
     const I = Math.floor(point.lat / this.tileWidth);

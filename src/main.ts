@@ -5,8 +5,6 @@ import luck from "./luck";
 import "./leafletWorkaround";
 import { Board, Token } from "./classes";
 
-//TODO - Start using the Board class
-
 const ORIGIN = leaflet.latLng({
   lat: 0,
   lng: 0,
@@ -22,25 +20,38 @@ const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const PIT_SPAWN_PROBABILITY = 0.1;
 const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
-const pitsOnMap: leaflet.Layer[] = [];
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 const map = createLeaflet(mapContainer);
+const pitsOnMap: leaflet.Layer[] = [];
 
-addLeafletToMap(map);
+const MOVEMENT_AMOUNT = 0.0001;
+const NORTH = leaflet.latLng(MOVEMENT_AMOUNT, 0);
+const SOUTH = leaflet.latLng(-MOVEMENT_AMOUNT, 0);
+const EAST = leaflet.latLng(0, MOVEMENT_AMOUNT);
+const WEST = leaflet.latLng(0, -MOVEMENT_AMOUNT);
 
 let playerMarker = moveMarker(null, PLAYER_LOCATION);
-playerMarker = moveMarker(playerMarker, PLAYER_LOCATION);
-map.setView(playerMarker.getLatLng());
-
-generateNeighborhood(PLAYER_LOCATION);
-
 const playerTokens: Token[] = [];
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No Tokens Yet";
 
+addLeafletToMap(map);
+
+playerMarker = moveMarker(playerMarker, PLAYER_LOCATION);
+centerMapAround(playerMarker.getLatLng());
+
+generateNeighborhood(PLAYER_LOCATION);
+
 createSensorButton();
 createResetButton();
+
+addMovementDirection("north", NORTH);
+addMovementDirection("south", SOUTH);
+addMovementDirection("east", EAST);
+addMovementDirection("west", WEST);
+
+addClearLocalStorageButton();
 
 //-------------------------------------
 //-------------------------------------
@@ -153,7 +164,7 @@ function createSensorButton() {
           lng: position.coords.longitude,
         })
       );
-      map.setView(playerMarker.getLatLng());
+      centerMapAround(playerMarker.getLatLng());
       generateNeighborhood(playerMarker.getLatLng());
     });
   });
@@ -163,8 +174,8 @@ function createResetButton() {
   const resetButton = document.querySelector("#reset")!;
   resetButton.addEventListener("click", () => {
     playerMarker.setLatLng(ORIGIN);
-    moveMarker(playerMarker, ORIGIN);
-    map.setView(playerMarker.getLatLng());
+    playerMarker = moveMarker(playerMarker, ORIGIN);
+    centerMapAround(playerMarker.getLatLng());
     generateNeighborhood(playerMarker.getLatLng());
   });
 }
@@ -211,4 +222,41 @@ function updateStatusPanel() {
     str += "[" + tkn.id + "] ";
   });
   statusPanel.innerHTML = "Collected Tokens: " + str;
+}
+
+function addMovementDirection(direction: string, amount: leaflet.LatLng) {
+  const dir = "#" + direction;
+  const button = document.querySelector<HTMLButtonElement>(dir);
+
+  button?.addEventListener("click", () => {
+    const pLocation = playerMarker.getLatLng();
+    console.log(direction);
+    playerMarker = moveMarker(
+      playerMarker,
+      leaflet.latLng({
+        lat: pLocation.lat + amount.lat,
+        lng: pLocation.lng + amount.lng,
+      })
+    );
+    generateNeighborhood(playerMarker.getLatLng());
+    centerMapAround(playerMarker.getLatLng());
+  });
+}
+
+function centerMapAround(point: leaflet.LatLng) {
+  map.setView(point);
+}
+
+//Use localstorage
+function addClearLocalStorageButton() {
+  const button = document.querySelector<HTMLButtonElement>("#clear");
+  button?.addEventListener("click", () => {
+    const reset = confirm("Would you like to reset the game?");
+    if (reset) {
+      console.log("yes");
+      localStorage.clear();
+    } else {
+      console.log("no");
+    }
+  });
 }
