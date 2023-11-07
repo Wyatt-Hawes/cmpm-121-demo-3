@@ -6,6 +6,11 @@ interface Cell {
   readonly j: number;
 }
 
+interface Momento {
+  readonly key: string;
+  readonly ts: Token[];
+}
+
 export class Token {
   readonly id: string;
   constructor(i: number, j: number, serial: number) {
@@ -55,9 +60,6 @@ export class Board {
     }
     return this.knownCellTokens.get(key)!;
   }
-  //   private setLocalStorage() {
-  //     localStorage.setItem("map", JSON.stringify(this.knownCellTokens));
-  //   }
 
   getCellForPoint(point: leaflet.LatLng): Cell {
     const I = Math.floor(point.lat / this.tileWidth);
@@ -78,9 +80,6 @@ export class Board {
   popTokenFromCell(cellCord: CellCoordinate, index: number): Token {
     const tokens = this.getCanonicalTokens(cellCord);
     return tokens.splice(index, 1)[0];
-
-    //const key = [cell.i, cell.j].toString();
-    //this.knownCells.set(key, cell);
   }
 
   getCellTokens(cellCord: CellCoordinate): Token[] {
@@ -105,5 +104,23 @@ export class Board {
 
   generateRandomSeededValue(i: number, j: number): number {
     return Math.floor(luck([i, j, "initialValue"].toString()) * 3 + 1);
+  }
+
+  toMomento(): string[] {
+    const momentos: string[] = [];
+    for (const [key, ts] of this.knownCellTokens) {
+      const m: Momento = { key, ts };
+      momentos.push(JSON.stringify(m));
+    }
+    return momentos;
+  }
+
+  fromMomento(momentos: string[]) {
+    this.knownCellTokens.clear();
+    for (const m of momentos) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const momento: Momento = JSON.parse(m);
+      this.knownCellTokens.set(momento.key, momento.ts);
+    }
   }
 }
