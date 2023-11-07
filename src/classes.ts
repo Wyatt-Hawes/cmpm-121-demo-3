@@ -123,4 +123,12 @@ export class Board {
       this.knownCellTokens.set(momento.key, momento.ts);
     }
   }
+  /* 
+    setKnownCell(key: string: momento: string) {
+        //this.knownCellTokens.set(key, momento);
+    }
+    getKnownCell(key: string) {
+        return this.knownCellTokens.get(key);
+    }
+    */
 }
