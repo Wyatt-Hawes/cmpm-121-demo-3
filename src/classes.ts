@@ -28,6 +28,7 @@ export class Board {
   readonly tileVisibilityRadius: number;
 
   private readonly knownCellTokens: Map<string, Token[]>;
+  //private readonly knownCellTokens: Map<string, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
@@ -106,29 +107,29 @@ export class Board {
     return Math.floor(luck([i, j, "initialValue"].toString()) * 3 + 1);
   }
 
-  toMomento(): string[] {
+  boardToMomento(): string[] {
     const momentos: string[] = [];
     for (const [key, ts] of this.knownCellTokens) {
       const m: Momento = { key, ts };
-      momentos.push(JSON.stringify(m));
+      momentos.push(this.toMomento(m));
     }
     return momentos;
   }
 
-  fromMomento(momentos: string[]) {
+  boardFromMomento(momentos: string[]) {
     this.knownCellTokens.clear();
     for (const m of momentos) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const momento: Momento = JSON.parse(m);
-      this.knownCellTokens.set(momento.key, momento.ts);
+      this.fromMomento(m);
     }
   }
-  /* 
-    setKnownCell(key: string: momento: string) {
-        //this.knownCellTokens.set(key, momento);
-    }
-    getKnownCell(key: string) {
-        return this.knownCellTokens.get(key);
-    }
-    */
+
+  toMomento(m: Momento) {
+    return JSON.stringify(m);
+  }
+  fromMomento(s: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const m: Momento = JSON.parse(s);
+    this.knownCellTokens.set(m.key, m.ts);
+  }
 }

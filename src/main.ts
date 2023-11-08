@@ -328,7 +328,7 @@ function addSaveButton() {
 }
 
 function storeStateToLocalStorage() {
-  const boardMomento = JSON.stringify(board.toMomento());
+  const boardMomento = JSON.stringify(board.boardToMomento());
   const playerMomento = JSON.stringify(playerTokens);
   const playerPositionMomento = JSON.stringify(playerMarker.getLatLng());
 
@@ -358,7 +358,7 @@ function restoreStateFromLocalStorage() {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const pP: leaflet.LatLng = JSON.parse(playerPositionMomento);
 
-  board.fromMomento(bM);
+  board.boardFromMomento(bM);
   playerTokens = pT;
   PLAYER_LOCATION = pP;
 }
