@@ -10,6 +10,11 @@ const ORIGIN = leaflet.latLng({
   lng: 0,
 });
 
+const MERRILL = leaflet.latLng({
+  lat: 36.9995,
+  lng: -122.0533,
+});
+
 let PLAYER_LOCATION = leaflet.latLng({
   lat: 36.9995,
   lng: -122.0533,
@@ -19,13 +24,18 @@ const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const PIT_SPAWN_PROBABILITY = 0.1;
-const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+let board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 const map = createLeaflet(mapContainer);
 const pitsOnMap: leaflet.Layer[] = [];
 
 const MOVEMENT_AMOUNT = 0.0001;
+let MOVEMENT_HISTORY: leaflet.LatLng[] = [];
+let MOVEMENT_HISTORY_LINE: leaflet.Polyline = leaflet
+  .polyline(MOVEMENT_HISTORY, { color: "red" })
+  .addTo(map);
+
 const NORTH = leaflet.latLng(MOVEMENT_AMOUNT, 0);
 const SOUTH = leaflet.latLng(-MOVEMENT_AMOUNT, 0);
 const EAST = leaflet.latLng(0, MOVEMENT_AMOUNT);
@@ -56,7 +66,11 @@ addMovementDirection("east", EAST);
 addMovementDirection("west", WEST);
 
 addSaveButton();
-addClearLocalStorageButton();
+//addClearLocalStorageButton();
+
+window.addEventListener("beforeunload", () => {
+  storeStateToLocalStorage();
+});
 
 //-------------------------------------
 //-------------------------------------
@@ -69,14 +83,11 @@ function makePit(i: number, j: number) {
   const bounds = board.getCellBounds(cell);
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
 
-  pit.bindPopup(
-    () => {
-      const container = updatePopupContent(i, j, pit);
+  pit.bindPopup(() => {
+    const container = updatePopupContent(i, j, pit);
 
-      return container;
-    }
-    //{ closeOnClick: false, autoClose: false }
-  );
+    return container;
+  });
 
   addPitToMap(pit);
 }
@@ -205,7 +216,8 @@ function createSensorButton() {
   const sensorButton = document.querySelector("#sensor")!;
   sensorButton.addEventListener("click", () => {
     console.log("click");
-    navigator.geolocation.getCurrentPosition((position) => {
+    //navigator.geolocation.getCurrentPosition((position) => {
+    navigator.geolocation.watchPosition((position) => {
       moveMarker(
         playerMarker,
         leaflet.latLng({
@@ -222,9 +234,17 @@ function createSensorButton() {
 function createResetButton() {
   const resetButton = document.querySelector("#reset")!;
   resetButton.addEventListener("click", () => {
-    playerMarker.setLatLng(ORIGIN);
-    playerMarker = moveMarker(playerMarker, ORIGIN);
+    playerMarker.setLatLng(MERRILL);
+    playerMarker = moveMarker(playerMarker, MERRILL);
     centerMapAround(playerMarker.getLatLng());
+    localStorage.clear();
+
+    restoreStateFromLocalStorage();
+
+    updateStatusPanel();
+    console.log(playerTokens);
+    resetHistoryLine();
+
     generateNeighborhood(playerMarker.getLatLng());
   });
 }
@@ -287,6 +307,7 @@ function addMovementDirection(direction: string, amount: leaflet.LatLng) {
         lng: pLocation.lng + amount.lng,
       })
     );
+    addPointToHistory(playerMarker.getLatLng());
     generateNeighborhood(playerMarker.getLatLng());
     centerMapAround(playerMarker.getLatLng());
   });
@@ -297,6 +318,7 @@ function centerMapAround(point: leaflet.LatLng) {
 }
 
 //Use localstorage
+/* 
 function addClearLocalStorageButton() {
   const button = document.querySelector<HTMLButtonElement>("#clear");
   button?.addEventListener("click", () => {
@@ -309,7 +331,7 @@ function addClearLocalStorageButton() {
     }
   });
 }
-
+*/
 // storeStateToLocalStorage();
 // console.log(localStorage);
 
@@ -331,34 +353,73 @@ function storeStateToLocalStorage() {
   const boardMomento = JSON.stringify(board.boardToMomento());
   const playerMomento = JSON.stringify(playerTokens);
   const playerPositionMomento = JSON.stringify(playerMarker.getLatLng());
+  const moveHistoryMomento = JSON.stringify(MOVEMENT_HISTORY);
 
   localStorage.setItem("boardMomento", boardMomento);
   localStorage.setItem("playerMomento", playerMomento);
   localStorage.setItem("playerPositionMomento", playerPositionMomento);
+  localStorage.setItem("moveHistoryMomento", moveHistoryMomento);
 }
 
 function restoreStateFromLocalStorage() {
   const boardMomento = localStorage.getItem("boardMomento");
   const playerMomento = localStorage.getItem("playerMomento");
   const playerPositionMomento = localStorage.getItem("playerPositionMomento");
+  const moveHistoryMomento = localStorage.getItem("moveHistoryMomento");
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  let bM: string[];
+  let pT: Token[];
+  let pP: leaflet.LatLng;
 
   if (
     boardMomento == null ||
     playerMomento == null ||
-    playerPositionMomento == null
+    playerPositionMomento == null ||
+    moveHistoryMomento == null
   ) {
     console.log("Past player data doesnt exist, starting new game");
-    return;
-  }
-  console.log("Past player data detected, loading existing data");
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const bM: string[] = JSON.parse(boardMomento);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const pT: Token[] = JSON.parse(playerMomento);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const pP: leaflet.LatLng = JSON.parse(playerPositionMomento);
+    board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
-  board.boardFromMomento(bM);
+    pT = [];
+    pP = MERRILL;
+    MOVEMENT_HISTORY = [];
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    bM = JSON.parse(boardMomento);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    pT = JSON.parse(playerMomento);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    pP = JSON.parse(playerPositionMomento);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    MOVEMENT_HISTORY = JSON.parse(moveHistoryMomento);
+
+    board.boardFromMomento(bM);
+    console.log("Past player data detected, loading existing data");
+  }
+
   playerTokens = pT;
   PLAYER_LOCATION = pP;
+  drawHistoryLine();
+  updateStatusPanel();
+}
+
+function addPointToHistory(p: leaflet.LatLng) {
+  MOVEMENT_HISTORY.push(p);
+  drawHistoryLine();
+}
+
+function resetHistoryLine() {
+  MOVEMENT_HISTORY = [];
+
+  drawHistoryLine();
+}
+
+function drawHistoryLine() {
+  MOVEMENT_HISTORY_LINE.removeFrom(map);
+  MOVEMENT_HISTORY_LINE = leaflet
+    .polyline(MOVEMENT_HISTORY, { color: "red" })
+    .addTo(map);
+
+  MOVEMENT_HISTORY_LINE.addTo(map);
 }
