@@ -68,6 +68,13 @@ export class Board {
     return { i: I, j: J };
   }
 
+  getPointFromCell(c: Cell): leaflet.LatLng {
+    const lat = c.i * this.tileWidth + this.tileWidth / 2;
+    const lng = c.j * this.tileWidth + this.tileWidth / 2;
+
+    return leaflet.latLng(lat, lng);
+  }
+
   getCellBounds(cell: Cell): leaflet.LatLngBounds {
     return leaflet.latLngBounds([
       [cell.i * this.tileWidth, cell.j * this.tileWidth],
@@ -131,5 +138,11 @@ export class Board {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const m: Momento = JSON.parse(s);
     this.knownCellTokens.set(m.key, m.ts);
+  }
+  ijFromID(tknID: string) {
+    const splitStr = tknID.split(/:|#/);
+    const i = parseInt(splitStr[0]);
+    const j = parseInt(splitStr[1]);
+    return { i, j };
   }
 }

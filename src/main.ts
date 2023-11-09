@@ -24,10 +24,12 @@ const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const PIT_SPAWN_PROBABILITY = 0.1;
+
 let board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 const map = createLeaflet(mapContainer);
+
 const pitsOnMap: leaflet.Layer[] = [];
 
 const MOVEMENT_AMOUNT = 0.0001;
@@ -41,12 +43,15 @@ const SOUTH = leaflet.latLng(-MOVEMENT_AMOUNT, 0);
 const EAST = leaflet.latLng(0, MOVEMENT_AMOUNT);
 const WEST = leaflet.latLng(0, -MOVEMENT_AMOUNT);
 
+let SHOWING_PLAYER = false;
+
 let playerMarker = moveMarker(null, PLAYER_LOCATION);
 let playerTokens: Token[] = [];
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No Tokens Yet";
 
-console.log(localStorage);
+let showingCachePopup: leaflet.Marker;
+
 restoreStateFromLocalStorage();
 updateStatusPanel();
 
@@ -257,7 +262,9 @@ function createLeaflet(mapCont: string | HTMLElement) {
     maxZoom: GAMEPLAY_ZOOM_LEVEL,
     zoomControl: false,
     scrollWheelZoom: false,
+    dragging: false,
   });
+
   return map;
 }
 
@@ -286,11 +293,72 @@ function moveMarker(marker: leaflet.Marker | null, location: leaflet.LatLng) {
 }
 
 function updateStatusPanel() {
-  let str = "";
+  let str = "<div>";
+
   playerTokens.forEach((tkn) => {
-    str += "[" + tkn.id + "] ";
+    const loc = board.ijFromID(tkn.id);
+
+    str +=
+      `<button id ="B` +
+      loc.i +
+      "_" +
+      loc.j +
+      `">` +
+      "[" +
+      tkn.id +
+      "]" +
+      "</button>";
   });
-  statusPanel.innerHTML = "Collected Tokens: " + str;
+  statusPanel.innerHTML = "Collected Tokens: " + str + "</div>";
+
+  //Give each button functionality of zooming into the caches location
+  playerTokens.forEach((tkn) => {
+    let loc = board.ijFromID(tkn.id);
+
+    const button = document.querySelector<HTMLButtonElement>(
+      "#B" + loc.i + "_" + loc.j
+    );
+
+    button?.addEventListener("click", () => {
+      if (SHOWING_PLAYER) {
+        return;
+      }
+      SHOWING_PLAYER = true;
+
+      loc = board.ijFromID(tkn.id);
+      const location = board.getPointFromCell(loc);
+      //Zoom to point on map
+      map.setView(location);
+      showingCachePopup = leaflet.marker(location);
+
+      //Place down marker
+      showingCachePopup.addTo(map);
+      showingCachePopup.bindPopup(() => {
+        const container = document.createElement("div");
+        container.innerHTML = "This is where the coin came from!";
+
+        return container;
+      });
+
+      //Move Player Back
+
+      map.addEventListener("moveend", () => {
+        showPlayerCacheLocation();
+      });
+    });
+  });
+}
+
+function showPlayerCacheLocation() {
+  if (SHOWING_PLAYER) {
+    showingCachePopup.openPopup();
+
+    showingCachePopup.addEventListener("popupclose", () => {
+      showingCachePopup.removeFrom(map);
+      map.setView(playerMarker.getLatLng());
+      SHOWING_PLAYER = false;
+    });
+  }
 }
 
 function addMovementDirection(direction: string, amount: leaflet.LatLng) {
@@ -340,11 +408,8 @@ function addSaveButton() {
   button?.addEventListener("click", () => {
     const reset = confirm("Would you like to save your progress?");
     if (reset) {
-      console.log("yes");
       storeStateToLocalStorage();
       console.log(localStorage);
-    } else {
-      console.log("no");
     }
   });
 }
