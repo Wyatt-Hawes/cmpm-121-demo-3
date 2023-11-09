@@ -20,6 +20,16 @@ let PLAYER_LOCATION = leaflet.latLng({
   lng: -122.0533,
 });
 
+const openMap = leaflet.tileLayer(
+  "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+  {
+    maxZoom: 17,
+    attribution:
+      // eslint-disable-next-line @typescript-eslint/quotes
+      'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+  }
+);
+
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
@@ -29,6 +39,7 @@ let board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 const map = createLeaflet(mapContainer);
+openMap.addTo(map);
 
 const pitsOnMap: leaflet.Layer[] = [];
 
@@ -49,8 +60,6 @@ let playerMarker = moveMarker(null, PLAYER_LOCATION);
 let playerTokens: Token[] = [];
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No Tokens Yet";
-
-let showingCachePopup: leaflet.Marker;
 
 restoreStateFromLocalStorage();
 updateStatusPanel();
@@ -294,7 +303,7 @@ function moveMarker(marker: leaflet.Marker | null, location: leaflet.LatLng) {
 
 function updateStatusPanel() {
   let str = "<div>";
-
+  console.log(playerTokens);
   playerTokens.forEach((tkn) => {
     const loc = board.ijFromID(tkn.id);
 
@@ -303,6 +312,8 @@ function updateStatusPanel() {
       loc.i +
       "_" +
       loc.j +
+      "_" +
+      loc.num +
       `">` +
       "[" +
       tkn.id +
@@ -313,52 +324,45 @@ function updateStatusPanel() {
 
   //Give each button functionality of zooming into the caches location
   playerTokens.forEach((tkn) => {
-    let loc = board.ijFromID(tkn.id);
+    const loc = board.ijFromID(tkn.id);
+    const location = board.getPointFromCell({ i: loc.i, j: loc.j });
 
     const button = document.querySelector<HTMLButtonElement>(
-      "#B" + loc.i + "_" + loc.j
+      "#B" + loc.i + "_" + loc.j + "_" + loc.num
     );
 
+    const popUp = leaflet.marker(location);
+    popUp.bindPopup(() => {
+      const container = document.createElement("div");
+      container.innerHTML = "This is where the coin came from!";
+      return container;
+    });
+
     button?.addEventListener("click", () => {
+      console.log(SHOWING_PLAYER);
       if (SHOWING_PLAYER) {
         return;
       }
       SHOWING_PLAYER = true;
-
-      loc = board.ijFromID(tkn.id);
-      const location = board.getPointFromCell(loc);
       //Zoom to point on map
       map.setView(location);
-      showingCachePopup = leaflet.marker(location);
 
-      //Place down marker
-      showingCachePopup.addTo(map);
-      showingCachePopup.bindPopup(() => {
-        const container = document.createElement("div");
-        container.innerHTML = "This is where the coin came from!";
+      //Place down marker and open it
+      popUp.addTo(map);
 
-        return container;
-      });
-
-      //Move Player Back
-
-      map.addEventListener("moveend", () => {
-        showPlayerCacheLocation();
-      });
+      //Wait to give time for the camera to move
+      setTimeout(() => {
+        popUp.openPopup();
+      }, 200);
     });
-  });
-}
 
-function showPlayerCacheLocation() {
-  if (SHOWING_PLAYER) {
-    showingCachePopup.openPopup();
-
-    showingCachePopup.addEventListener("popupclose", () => {
-      showingCachePopup.removeFrom(map);
+    //Remove point from map on close and focus back on the player
+    popUp.addEventListener("popupclose", () => {
+      popUp.removeFrom(map);
       map.setView(playerMarker.getLatLng());
       SHOWING_PLAYER = false;
     });
-  }
+  });
 }
 
 function addMovementDirection(direction: string, amount: leaflet.LatLng) {

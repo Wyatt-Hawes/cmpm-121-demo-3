@@ -143,6 +143,7 @@ export class Board {
     const splitStr = tknID.split(/:|#/);
     const i = parseInt(splitStr[0]);
     const j = parseInt(splitStr[1]);
-    return { i, j };
+    const num = parseInt(splitStr[2]);
+    return { i, j, num };
   }
 }
