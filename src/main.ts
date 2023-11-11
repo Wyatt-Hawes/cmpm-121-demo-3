@@ -232,15 +232,17 @@ function createSensorButton() {
     console.log("click");
     //navigator.geolocation.getCurrentPosition((position) => {
     navigator.geolocation.watchPosition((position) => {
-      moveMarker(
+      playerMarker = moveMarker(
         playerMarker,
         leaflet.latLng({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         })
       );
-      centerMapAround(playerMarker.getLatLng());
+
+      addPointToHistory(playerMarker.getLatLng());
       generateNeighborhood(playerMarker.getLatLng());
+      centerMapAround(playerMarker.getLatLng());
     });
   });
 }
