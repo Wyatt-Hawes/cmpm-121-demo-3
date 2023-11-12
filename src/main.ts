@@ -391,24 +391,6 @@ function centerMapAround(point: leaflet.LatLng) {
   map.setView(point);
 }
 
-//Use localstorage
-/* 
-function addClearLocalStorageButton() {
-  const button = document.querySelector<HTMLButtonElement>("#clear");
-  button?.addEventListener("click", () => {
-    const reset = confirm("Would you like to reset the game?");
-    if (reset) {
-      console.log("yes");
-      localStorage.clear();
-    } else {
-      console.log("no");
-    }
-  });
-}
-*/
-// storeStateToLocalStorage();
-// console.log(localStorage);
-
 function addSaveButton() {
   const button = document.querySelector<HTMLButtonElement>("#save");
   button?.addEventListener("click", () => {
@@ -482,7 +464,6 @@ function addPointToHistory(p: leaflet.LatLng) {
 
 function resetHistoryLine() {
   MOVEMENT_HISTORY = [];
-
   drawHistoryLine();
 }
 
