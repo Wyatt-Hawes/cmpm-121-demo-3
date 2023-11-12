@@ -28,7 +28,6 @@ export class Board {
   readonly tileVisibilityRadius: number;
 
   private readonly knownCellTokens: Map<string, Token[]>;
-  //private readonly knownCellTokens: Map<string, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
